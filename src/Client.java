@@ -1,10 +1,17 @@
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.Scanner;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 
 public class Client {
@@ -21,13 +28,13 @@ public class Client {
 			System.out.print("> ");
 			String command = input.nextLine();
 			this.validationError = false;
-			processCommand(command);
+			processCommand(command.trim());
 		}
 	}
 
 	private void processCommand(String command) {
-		if (command.startsWith("Server ")){
-			String[] parts = command.split("\\s");
+		String[] parts = command.split("\\s+");
+		if (parts[0].equals("Server")){
 			if (parts.length != 3){
 				System.out.println("ERROR: Wrong number of arguments");
 				validationError = true;
@@ -40,17 +47,21 @@ public class Client {
 				serverPort = new Integer(parts[2]);
 				System.out.println("OK - server set successfully");
 			}
-		} else if (command.startsWith("Quit")){
+		} else if (parts[0].equals("Test")){
+			String test = sendAndReceive(command);
+			if (test != null && !test.isEmpty())
+				System.out.println("Server alive and ready");
+		} else if (parts[0].equals("Quit")){
 			this.alive = false;
-		} else if (command.startsWith("Kill")){
+		} else if (parts[0].equals("Kill")){
 			validateServerPresence();
+			System.out.println(sendAndReceive(command));
 			if (!validationError){
 				serverAddress = null;
 				serverPort = null;
 			}
-		} else if (command.startsWith("Find ")){
+		} else if (parts[0].equals("Find")){
 			validateServerPresence();
-			String[] parts = command.split("\\s");
 			if (parts.length != 3){
 				System.out.println("ERROR: Wrong number of arguments");
 				validationError = true;
@@ -59,11 +70,10 @@ public class Client {
 				validateIPAddress(parts[2], true);
 			}
 			if (!validationError){
-				sendAndReceive(command);
+				System.out.println(sendAndReceive(command));
 			}
-		} else if (command.startsWith("Insert ")){
+		} else if (parts[0].equals("Insert")){
 			validateServerPresence();
-			String[] parts = command.split("\\s");
 			if (parts.length != 4){
 				System.out.println("ERROR: Wrong number of arguments");
 				validationError = true;
@@ -73,11 +83,10 @@ public class Client {
 				validatePort(parts[3]);
 			}
 			if (!validationError){
-				sendAndReceive(command);
+				System.out.println(sendAndReceive(command));
 			}
-		} else if (command.startsWith("Delete ")){
+		} else if (parts[0].equals("Delete")){
 			validateServerPresence();
-			String[] parts = command.split("\\s");
 			if (parts.length < 2 || parts.length > 4){
 				System.out.println("ERROR: Wrong number of arguments");
 				validationError = true;
@@ -89,17 +98,19 @@ public class Client {
 					validatePort(parts[3]);
 			}
 			if (!validationError){
-				sendAndReceive(command);
+				System.out.println(sendAndReceive(command));
 			}
 		} else {
 			System.out.println("ERROR: unknown command");
 		}
 	}
 
-	private void sendAndReceive(String command) {
+	private String sendAndReceive(final String command) {
+		String result = "";
 		try {
 			InetAddress address = InetAddress.getByName(serverAddress);
 			DatagramSocket socket = new DatagramSocket();
+			socket.setSoTimeout(6000);
 			//sending
 			DatagramPacket packet = new DatagramPacket(command.getBytes(), command.getBytes().length, address, serverPort);
 			socket.send(packet);
@@ -107,14 +118,17 @@ public class Client {
 			byte[] buf = new byte[256];
 			packet = new DatagramPacket(buf, buf.length);
 			socket.receive(packet);
-			System.out.println(new String(packet.getData(), 0, packet.getLength()));
+			result = new String(packet.getData(), 0, packet.getLength());
 		} catch (UnknownHostException e) {
 			System.out.println("ERROR: Host not found");
+		} catch (SocketTimeoutException e) {
+			System.out.println("ERROR: Request timed out. Server apparently unavailable");
 		} catch (SocketException e) {
-			System.out.println("Error initiating socket");
+			System.out.println("Error reading from socket");
 		} catch (IOException e) {
 			System.out.println("Error writing to socket");
-		}		
+        }
+		return result;
 	}
 
 	private void validateServerPresence() {
