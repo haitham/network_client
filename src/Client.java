@@ -35,6 +35,7 @@ public class Client {
 	private void processCommand(String command) {
 		String[] parts = command.split("\\s+");
 		if (parts[0].equals("Server")){
+			//Server command
 			if (parts.length != 3){
 				System.out.println("ERROR: Wrong number of arguments");
 				validationError = true;
@@ -45,15 +46,18 @@ public class Client {
 			if (!validationError){
 				serverAddress = parts[1];
 				serverPort = new Integer(parts[2]);
-				System.out.println("OK - server set successfully");
+				System.out.println("OK - server set successfully to " + serverAddress + ":" + serverPort);
 			}
 		} else if (parts[0].equals("Test")){
+			//Test command
 			String test = sendAndReceive(command);
 			if (test != null && !test.isEmpty())
 				System.out.println("Server alive and ready");
 		} else if (parts[0].equals("Quit")){
+			//Quit command
 			this.alive = false;
 		} else if (parts[0].equals("Kill")){
+			//Kill command
 			validateServerPresence();
 			System.out.println(sendAndReceive(command));
 			if (!validationError){
@@ -61,6 +65,7 @@ public class Client {
 				serverPort = null;
 			}
 		} else if (parts[0].equals("Find")){
+			//Find command
 			validateServerPresence();
 			if (parts.length != 3){
 				System.out.println("ERROR: Wrong number of arguments");
@@ -73,6 +78,7 @@ public class Client {
 				System.out.println(sendAndReceive(command));
 			}
 		} else if (parts[0].equals("Insert")){
+			//Insert Command
 			validateServerPresence();
 			if (parts.length != 4){
 				System.out.println("ERROR: Wrong number of arguments");
@@ -86,6 +92,7 @@ public class Client {
 				System.out.println(sendAndReceive(command));
 			}
 		} else if (parts[0].equals("Delete")){
+			//Delete command
 			validateServerPresence();
 			if (parts.length < 2 || parts.length > 4){
 				System.out.println("ERROR: Wrong number of arguments");
@@ -101,6 +108,7 @@ public class Client {
 				System.out.println(sendAndReceive(command));
 			}
 		} else {
+			//Unknown command
 			System.out.println("ERROR: unknown command");
 		}
 	}
