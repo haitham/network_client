@@ -1,17 +1,11 @@
 import java.io.IOException;
-import java.io.PrintStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 import java.util.Scanner;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 
 public class Client {
@@ -113,7 +107,7 @@ public class Client {
 		}
 	}
 
-	private String sendAndReceive(final String command) {
+	private String sendAndReceive(String command) {
 		String result = "";
 		try {
 			InetAddress address = InetAddress.getByName(serverAddress);
