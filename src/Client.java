@@ -65,7 +65,7 @@ public class Client {
 				System.out.println("ERROR: Wrong number of arguments");
 				validationError = true;
 			} else {
-				validateName(parts[1], true);
+				validateName(parts[1], true, false, false);
 				validateIPAddress(parts[2], true);
 			}
 			if (!validationError){
@@ -78,7 +78,7 @@ public class Client {
 				System.out.println("ERROR: Wrong number of arguments");
 				validationError = true;
 			} else {
-				validateName(parts[1], false);
+				validateName(parts[1], false, false, false);
 				validateIPAddress(parts[2], false);
 				validatePort(parts[3]);
 			}
@@ -92,7 +92,7 @@ public class Client {
 				System.out.println("ERROR: Wrong number of arguments");
 				validationError = true;
 			} else {
-				validateName(parts[1], true);
+				validateName(parts[1], true, false, false);
 				if (parts.length > 2)
 					validateIPAddress(parts[2], true);
 				if (parts.length > 3)
@@ -176,11 +176,16 @@ public class Client {
 		}
 	}
 	
-	private void validateName(String name, boolean wildcard){
-		if (wildcard && "*".equals(name))
+	private void validateName(String name, boolean wildcardAllowed, boolean listAllowed, boolean selfAllowed){
+		if (wildcardAllowed && "*".equals(name))
 			return;
-		if (!name.matches("\\w{1,80}")){
+		if (!name.matches("\\w{1,80}") && !(listAllowed && name.matches("\"(\\w{1,80}\\,)*\\w{1,80}(\\w{1,80}\\,)*\""))){
 			System.out.println("ERROR: Invalid name");
+			validationError = true;
+			return;
+		}
+		if (!selfAllowed && (name.toLowerCase().equals("self") || (listAllowed && name.toLowerCase().matches("\"(.+\\,)?self(\\,.+)?\"")))){
+			System.out.println("ERROR: SELF is a reserved name");
 			validationError = true;
 		}
 	}
