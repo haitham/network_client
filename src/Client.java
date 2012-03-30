@@ -34,6 +34,7 @@ public class Client {
 	}
 
 	private void processCommand(String command) {
+		command = command.replaceAll("\\s*\\,\\s*", ",");
 		String[] parts = command.split("\\s+");
 		if (parts[0].equals("Server")){
 			//Server command
@@ -45,6 +46,8 @@ public class Client {
 				validatePort(parts[2]);
 			}
 			if (!validationError){
+				if (this.port != null) //registered
+					unregister("Unregister " + this.name, this.name);
 				serverAddress = parts[1];
 				serverPort = new Integer(parts[2]);
 				System.out.println("OK - server set successfully to " + serverAddress + ":" + serverPort);
@@ -55,11 +58,15 @@ public class Client {
 			if (validationError)
 				return;
 			String test = sendAndReceive(command);
-			if (test != null && !test.isEmpty())
+			if (test.startsWith("ERROR"))
+				System.out.println(test);
+			else
 				System.out.println("Server alive and ready");
 		} else if (parts[0].equals("Quit")){
 			//Quit command
 			this.alive = false;
+			if (this.port != null) //registered
+				unregister("Unregister " + this.name, this.name);
 		} else if (parts[0].equals("Kill")){
 			//Kill command
 			validateServerPresence();
@@ -230,7 +237,7 @@ public class Client {
 
 	private void register(String command, String name, Integer port) {
 		if (this.port != null){
-			System.out.println("ERROR: You are already registered");
+			System.out.println("ERROR: You are already registered - Your name is " + this.name);
 			return;
 		}
 		String response = sendAndReceive(command);
