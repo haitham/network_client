@@ -11,8 +11,10 @@ import java.util.Scanner;
 public class Client {
 	private String serverAddress;
 	private Integer serverPort;
-	Boolean alive;
-	Boolean validationError;
+	private Boolean alive;
+	private Boolean validationError;
+	private Integer port;
+	private String name;
 	
 	public Client() {
 		Scanner input = new Scanner(System.in);
@@ -21,6 +23,11 @@ public class Client {
 		while(alive){
 			System.out.print("> ");
 			String command = input.nextLine();
+			if (command.trim().startsWith("Send")){
+				String line;
+				while (!(line = input.nextLine()).trim().equals("."))
+					command = command + "\n" + line;
+			}
 			this.validationError = false;
 			processCommand(command.trim());
 		}
@@ -44,6 +51,9 @@ public class Client {
 			}
 		} else if (parts[0].equals("Test")){
 			//Test command
+			validateServerPresence();
+			if (validationError)
+				return;
 			String test = sendAndReceive(command);
 			if (test != null && !test.isEmpty())
 				System.out.println("Server alive and ready");
@@ -57,6 +67,8 @@ public class Client {
 			if (!validationError){
 				serverAddress = null;
 				serverPort = null;
+				if (port != null) //listener active
+					teardownListener();
 			}
 		} else if (parts[0].equals("Find")){
 			//Find command
@@ -101,10 +113,165 @@ public class Client {
 			if (!validationError){
 				System.out.println(sendAndReceive(command));
 			}
+		} else if (parts[0].equals("Link")){
+			//Link command
+			validateServerPresence();
+			if (parts.length != 2){
+				System.out.println("ERROR: Wrong number of arguments");
+				validationError = true;
+			} else {
+				validateName(parts[1], false, false, false);
+			}
+			if (!validationError){
+				System.out.println(sendAndReceive(command));
+			}
+		} else if (parts[0].equals("Unlink")){
+			//Unlink command
+			validateServerPresence();
+			if (parts.length != 2){
+				System.out.println("ERROR: Wrong number of arguments");
+				validationError = true;
+			} else {
+				validateName(parts[1], false, false, false);
+			}
+			if (!validationError){
+				System.out.println(sendAndReceive(command));
+			}
+		} else if (parts[0].equals("Register")){
+			//Register command
+			validateServerPresence();
+			if (parts.length != 3){
+				System.out.println("ERROR: Wrong number of arguments");
+				validationError = true;
+			} else {
+				validateName(parts[1], false, false, false);
+				validatePort(parts[2]);
+			}
+			if (!validationError){
+				register(command, parts[1], new Integer(parts[2]));
+			}
+		} else if (parts[0].equals("Unregister")){
+			//Unregister command
+			validateServerPresence();
+			if (parts.length != 2){
+				System.out.println("ERROR: Wrong number of arguments");
+				validationError = true;
+			} else {
+				validateName(parts[1], false, false, false);
+			}
+			if (!validationError){
+				unregister(command, parts[1]);
+			}
+		} else if (parts[0].equals("List")){
+			//List command
+			validateServerPresence();
+			if (parts.length != 3){
+				System.out.println("ERROR: Wrong number of arguments");
+				validationError = true;
+			} else {
+				validateName(parts[1], true, true, false);
+				validateName(parts[2], true, true, true);
+			}
+			if (!validationError){
+				System.out.println(sendAndReceive(command));
+			}
+		} else if (parts[0].equals("Send")){
+			//Send command
+			validateServerPresence();
+			if (parts.length < 4){
+				System.out.println("ERROR: Wrong number of arguments");
+				validationError = true;
+			} else {
+				validateName(parts[1], true, true, false);
+				validateName(parts[2], true, true, true);
+				String[] lines = command.split("\n");
+				if (lines.length < 2){
+					System.out.println("ERROR: empty message discarded");
+					validationError = true;
+				}
+			}
+			if (!validationError){
+				System.out.println(sendAndReceive(command));
+			}
 		} else {
 			//Unknown command
 			System.out.println("ERROR: unknown command");
 		}
+	}
+	
+	private void unregister(String command, String name){
+		if (port == null){
+			System.out.println("ERROR: You are not registered");
+			return;
+		}
+		if (!name.equals(this.name)){
+			System.out.println("ERROR: You are not registered under this name");
+			return;
+		}
+		String response = sendAndReceive(command);
+		teardownListener();
+		System.out.println(response);
+	}
+	
+	private void teardownListener(){
+		DatagramSocket socket;
+		try {
+			socket = new DatagramSocket();
+			socket.setSoTimeout(2000);
+			DatagramPacket packet = new DatagramPacket("STOP".getBytes(), "STOP".getBytes().length, InetAddress.getByName("127.0.0.1"), port);
+			socket.send(packet);
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.out.println("WARNING: failed to terminate listening thread");
+		}
+		this.port = null;
+		this.name = null;
+	}
+
+	private void register(String command, String name, Integer port) {
+		if (this.port != null){
+			System.out.println("ERROR: You are already registered");
+			return;
+		}
+		String response = sendAndReceive(command);
+		
+		if (!response.trim().startsWith("ERROR")){
+			this.port = port;
+			this.name = name;
+			receiveMessages(port);
+		}
+		
+		System.out.println(response);
+	}
+	
+	private void receiveMessages(final Integer port){
+		new Thread(new Runnable() {
+			public void run() {
+				Boolean alive = true;
+				try {
+					DatagramSocket socket = new DatagramSocket(port);
+					while (alive){
+						byte[] buf = new byte[1024];
+						DatagramPacket packet = new DatagramPacket(buf, buf.length);
+						socket.receive(packet);
+						String message = new String(packet.getData(), 0, packet.getLength());
+						if (message.trim().startsWith("STOP"))
+							alive = false;
+						else{
+							System.out.println("NEW MESSAGE:\n" + message);
+							System.out.print("> ");
+						}
+						buf = "OK".getBytes();
+						packet = new DatagramPacket(buf, buf.length, packet.getAddress(), packet.getPort());
+						socket.send(packet);
+					}
+					socket.close();
+				} catch (Exception e) {
+					e.printStackTrace();
+					System.out.println("Error - port number might be already used");
+				}
+			}
+		}).start();
 	}
 
 	private String sendAndReceive(String command) {
@@ -112,23 +279,23 @@ public class Client {
 		try {
 			InetAddress address = InetAddress.getByName(serverAddress);
 			DatagramSocket socket = new DatagramSocket();
-			socket.setSoTimeout(6000);
+			socket.setSoTimeout(12000);
 			//sending
 			DatagramPacket packet = new DatagramPacket(command.getBytes(), command.getBytes().length, address, serverPort);
 			socket.send(packet);
 			//receiving
-			byte[] buf = new byte[256];
+			byte[] buf = new byte[1024];
 			packet = new DatagramPacket(buf, buf.length);
 			socket.receive(packet);
 			result = new String(packet.getData(), 0, packet.getLength());
 		} catch (UnknownHostException e) {
-			System.out.println("ERROR: Host not found");
+			result = "ERROR: Host not found";
 		} catch (SocketTimeoutException e) {
-			System.out.println("ERROR: Request timed out. Server apparently unavailable");
+			result = "ERROR: Request timed out. Server apparently unavailable";
 		} catch (SocketException e) {
-			System.out.println("Error reading from socket");
+			result = "ERROR reading from socket";
 		} catch (IOException e) {
-			System.out.println("Error writing to socket");
+			result = "ERROR writing to socket";
         }
 		return result;
 	}
