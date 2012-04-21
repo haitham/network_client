@@ -93,13 +93,12 @@ public class Client {
 		} else if (parts[0].equals("Insert")){
 			//Insert Command
 			validateServerPresence();
-			if (parts.length != 4){
+			if (parts.length != 3){
 				System.out.println("ERROR: Wrong number of arguments");
 				validationError = true;
 			} else {
-				validateName(parts[1], false, false, false);
-				validateIPAddress(parts[2], false);
-				validatePort(parts[3]);
+				validateIPAddress(parts[1], false);
+				validatePort(parts[2]);
 			}
 			if (!validationError){
 				System.out.println(sendAndReceive(command));
@@ -107,15 +106,14 @@ public class Client {
 		} else if (parts[0].equals("Delete")){
 			//Delete command
 			validateServerPresence();
-			if (parts.length < 2 || parts.length > 4){
+			if (parts.length < 1 || parts.length > 3){
 				System.out.println("ERROR: Wrong number of arguments");
 				validationError = true;
 			} else {
-				validateName(parts[1], true, false, false);
+				if (parts.length > 1)
+					validateIPAddress(parts[1], true);
 				if (parts.length > 2)
-					validateIPAddress(parts[2], true);
-				if (parts.length > 3)
-					validatePort(parts[3]);
+					validatePort(parts[2]);
 			}
 			if (!validationError){
 				System.out.println(sendAndReceive(command));
@@ -123,11 +121,14 @@ public class Client {
 		} else if (parts[0].equals("Link")){
 			//Link command
 			validateServerPresence();
-			if (parts.length != 2){
+			if (parts.length == 2){
+				validateName(parts[1], false, false, false);
+			} else if (parts.length == 3){
+				validateIPAddress(parts[1], false);
+				validatePort(parts[2]);
+			} else {
 				System.out.println("ERROR: Wrong number of arguments");
 				validationError = true;
-			} else {
-				validateName(parts[1], false, false, false);
 			}
 			if (!validationError){
 				System.out.println(sendAndReceive(command));
@@ -135,11 +136,14 @@ public class Client {
 		} else if (parts[0].equals("Unlink")){
 			//Unlink command
 			validateServerPresence();
-			if (parts.length != 2){
+			if (parts.length == 2){
+				validateName(parts[1], false, false, false);
+			} else if (parts.length == 3){
+				validateIPAddress(parts[1], false);
+				validatePort(parts[2]);
+			} else {
 				System.out.println("ERROR: Wrong number of arguments");
 				validationError = true;
-			} else {
-				validateName(parts[1], false, false, false);
 			}
 			if (!validationError){
 				System.out.println(sendAndReceive(command));
@@ -172,12 +176,14 @@ public class Client {
 		} else if (parts[0].equals("List")){
 			//List command
 			validateServerPresence();
-			if (parts.length != 3){
-				System.out.println("ERROR: Wrong number of arguments");
-				validationError = true;
-			} else {
+			if (parts.length == 2){
+				validateName(parts[1], true, true, false);
+			} else if (parts.length == 3){
 				validateName(parts[1], true, true, false);
 				validateName(parts[2], true, true, true);
+			} else {
+				System.out.println("ERROR: Wrong number of arguments");
+				validationError = true;
 			}
 			if (!validationError){
 				System.out.println(sendAndReceive(command));
