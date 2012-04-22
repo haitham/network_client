@@ -191,17 +191,39 @@ public class Client {
 		} else if (parts[0].equals("Send")){
 			//Send command
 			validateServerPresence();
-			if (parts.length < 4){
-				System.out.println("ERROR: Wrong number of arguments");
-				validationError = true;
-			} else {
+			parts = command.split("\n")[0].split("\\s+");
+			if (parts.length == 3){
 				validateName(parts[1], true, true, false);
 				validateName(parts[2], true, true, true);
-				String[] lines = command.split("\n");
-				if (lines.length < 2){
-					System.out.println("ERROR: empty message discarded");
-					validationError = true;
-				}
+			} else if (parts.length == 2){
+				validateName(parts[1], true, true, false);
+			} else {
+				System.out.println("ERROR: Wrong number of arguments");
+				validationError = true;
+			}
+			if (!validationError){
+				System.out.println(sendAndReceive(command));
+			}
+		} else if (parts[0].equals("Neighbors")){
+			// Neighbors command
+			validateServerPresence();
+			if (parts.length > 2){
+				System.out.println("ERROR: Wrong number of arguments");
+				validationError = true;
+			} else if (parts.length == 2) {
+				validateName(parts[1], true, true, true);
+			}
+			if (!validationError){
+				System.out.println(sendAndReceive(command));
+			}
+		} else if (parts[0].equals("Forwarding")){
+			// Forwarding command
+			validateServerPresence();
+			if (parts.length > 2){
+				System.out.println("ERROR: Wrong number of arguments");
+				validationError = true;
+			} else if (parts.length == 2) {
+				validateName(parts[1], true, true, true);
 			}
 			if (!validationError){
 				System.out.println(sendAndReceive(command));
@@ -292,7 +314,7 @@ public class Client {
 		try {
 			InetAddress address = InetAddress.getByName(serverAddress);
 			DatagramSocket socket = new DatagramSocket();
-			socket.setSoTimeout(12000);
+			socket.setSoTimeout(15000);
 			//sending
 			DatagramPacket packet = new DatagramPacket(command.getBytes(), command.getBytes().length, address, serverPort);
 			socket.send(packet);
